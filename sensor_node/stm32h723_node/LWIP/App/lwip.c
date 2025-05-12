@@ -29,6 +29,150 @@
 
 /* USER CODE BEGIN 0 */
 
+void logger(const char *fmt, ...) {
+	printf(fmt);
+}
+
+#include "uart.h"
+
+#include "pppos.h"
+#include "sio.h"
+#include "dns.h"
+#include "ppp.h"
+
+static ppp_pcb *ppp;
+struct netif pppos_netif;
+
+void PppGetTask(void const * argument)
+{
+  uint8_t recv[2048];
+  uint16_t length = 0;
+  for(;;)
+  {
+	length=usart_Recv(recv, 2048);
+	if (length)
+	{
+		pppos_input(ppp, recv, length);
+		logger("read - PppGetTask() len = %d\n", length);
+	}
+
+	osDelay(10);
+  }
+
+}
+
+#include "ip4_addr.h"
+#include "dns.h"
+
+static void ppp_link_status_cb(ppp_pcb *pcb, int err_code, void *ctx)
+{
+		struct netif *pppif = ppp_netif(pcb);
+		LWIP_UNUSED_ARG(ctx);
+
+		switch(err_code)
+		{
+			case PPPERR_NONE:               /* No error. */
+			{
+				logger("ppp_link_status_cb: PPPERR_NONE\n\r");
+				logger("   our_ip4addr = %s\n\r", ip4addr_ntoa(netif_ip4_addr(pppif)));
+				logger("   his_ipaddr  = %s\n\r", ip4addr_ntoa(netif_ip4_gw(pppif)));
+				logger("   netmask     = %s\n\r", ip4addr_ntoa(netif_ip4_netmask(pppif)));
+			}
+			break;
+
+			case PPPERR_PARAM:             /* Invalid parameter. */
+					logger("ppp_link_status_cb: PPPERR_PARAM\n");
+					break;
+
+			case PPPERR_OPEN:              /* Unable to open PPP session. */
+					logger("ppp_link_status_cb: PPPERR_OPEN\n");
+					break;
+
+			case PPPERR_DEVICE:            /* Invalid I/O device for PPP. */
+					logger("ppp_link_status_cb: PPPERR_DEVICE\n");
+					break;
+
+			case PPPERR_ALLOC:             /* Unable to allocate resources. */
+					logger("ppp_link_status_cb: PPPERR_ALLOC\n");
+					break;
+
+			case PPPERR_USER:              /* User interrupt. */
+					logger("ppp_link_status_cb: PPPERR_USER\n");
+					break;
+
+			case PPPERR_CONNECT:           /* Connection lost. */
+					logger("ppp_link_status_cb: PPPERR_CONNECT\n");
+					break;
+
+			case PPPERR_AUTHFAIL:          /* Failed authentication challenge. */
+					logger("ppp_link_status_cb: PPPERR_AUTHFAIL\n");
+					break;
+
+			case PPPERR_PROTOCOL:          /* Failed to meet protocol. */
+					logger("ppp_link_status_cb: PPPERR_PROTOCOL\n");
+					break;
+
+			case PPPERR_PEERDEAD:          /* Connection timeout. */
+					logger("ppp_link_status_cb: PPPERR_PEERDEAD\n");
+					break;
+
+			case PPPERR_IDLETIMEOUT:       /* Idle Timeout. */
+					logger("ppp_link_status_cb: PPPERR_IDLETIMEOUT\n");
+					break;
+
+			case PPPERR_CONNECTTIME:       /* PPPERR_CONNECTTIME. */
+					logger("ppp_link_status_cb: PPPERR_CONNECTTIME\n");
+					break;
+
+			case PPPERR_LOOPBACK:          /* Connection timeout. */
+					logger("ppp_link_status_cb: PPPERR_LOOPBACK\n");
+					break;
+			default:
+					logger("ppp_link_status_cb: unknown errCode %d\n", err_code);
+					break;
+		}
+}
+
+// Callback used by ppp connection
+static u32_t ppp_output_cb(ppp_pcb *pcb, u8_t *data, u32_t len, void *ctx)
+{
+	LWIP_UNUSED_ARG(pcb);
+	LWIP_UNUSED_ARG(ctx);
+
+	if (len > 0)
+	{
+		if (!usart_Send(data, len))
+				return 0x05;
+	}
+	logger("write - ppp_output_cb() len = %d\n", len);
+
+	return len;
+}
+
+void pppConnect(void)
+{
+	ppp = pppos_create(&pppos_netif, ppp_output_cb, ppp_link_status_cb, NULL);
+	ppp_set_default(ppp);
+
+	osThreadId PppGetTaskHandle;
+	osThreadDef(PPP_GET_TASK_NAME, PppGetTask, osPriorityNormal, 0, 128*10);
+	PppGetTaskHandle = osThreadCreate(osThread(PPP_GET_TASK_NAME), NULL);
+
+	err_t err = ppp_connect(ppp,0);
+	if (err == ERR_ALREADY)
+	{
+		logger("Connected successfully");
+	}
+
+	for(int i=0;i<40;i++)
+	{
+		osDelay(500);
+		if (ppp->phase >= PPP_PHASE_RUNNING)
+			break;
+	}
+
+}
+
 /* USER CODE END 0 */
 /* Private function prototypes -----------------------------------------------*/
 static void ethernet_link_status_updated(struct netif *netif);
@@ -101,6 +245,8 @@ void MX_LWIP_Init(void)
 /* USER CODE END H7_OS_THREAD_DEF_CREATE_CMSIS_RTOS_V1 */
 
 /* USER CODE BEGIN 3 */
+
+  pppConnect();
 
 /* USER CODE END 3 */
 }

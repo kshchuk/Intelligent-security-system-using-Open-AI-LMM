@@ -97,9 +97,6 @@ int main(void)
   /* Enable I-Cache---------------------------------------------------------*/
   SCB_EnableICache();
 
-  /* Enable D-Cache---------------------------------------------------------*/
-  SCB_EnableDCache();
-
   /* MCU Configuration--------------------------------------------------------*/
 
   /* Reset of all peripherals, Initializes the Flash interface and the Systick. */
@@ -150,7 +147,6 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
 
-  usart_Open();
   /* add threads, ... */
   /* USER CODE END RTOS_THREADS */
 
@@ -385,21 +381,11 @@ u32_t sys_jiffies(void) {
 /* USER CODE END Header_StartDefaultTask */
 void StartDefaultTask(void const * argument)
 {
-	  uint8_t send[] = "Send message\r\n";
-	  uint8_t recv[MAX_MESSAGE_LENGTH] = {0};
-	  uint16_t recvLength = 0;
-
-	if (usart_Send(send, sizeof(send)-1))
-	recvLength = usart_Recv(recv, MAX_MESSAGE_LENGTH-1);
-	if (recvLength)
-	{
-	  recv[recvLength] = 0;
-	}
-
   /* init code for LWIP */
   MX_LWIP_Init();
   /* USER CODE BEGIN 5 */
-  /* Infinite loop */
+  usart_Open();
+  MX_LWIP_Init();
   for(;;)
   {
 	  HAL_GPIO_TogglePin(LED_1_GPIO_Port, LED_1_Pin);
