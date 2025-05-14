@@ -1,22 +1,36 @@
-from openai import OpenAI
+import os
 
-client = OpenAI()
+from core.ai_analyzer import AIAnalyzer
+from alerts.alert_db import AlertStore
+from core.camera_capture import CameraCapture
+from envs import IMAGE_DIR, HLS_DIR, DB_PATH, CAMERA_INDEX, MQTT_BROKER, MQTT_PORT
+from core.hub_app import HubApp
+from alerts.mqtt_handler import MQTTHandler
 
-request = ("It's image from security camera. Some movement was detected via movement sensors. "
-           "Please provide a detailed description of the reason for the move. (if human, it's detailed appearance, if cat it's colour etc.)")
+if __name__ == "__main__":
+    # Ensure directories exist
+    os.makedirs(IMAGE_DIR, exist_ok=True)
 
-response = client.responses.create(
-    model="gpt-4.1-mini",
-    input=[{
-        "role": "user",
-        "content": [
-            {"type": "input_text", "text": request },
-            {
-                "type": "input_image",
-                "image_url": "https://www.security.org/app/uploads/2020/05/Vivint-Outdoor-Cam-Pro-Night-Vision.jpg",
-            },
-        ],
-    }],
-)
+    os.makedirs(HLS_DIR, exist_ok=True)
 
-print(response.output_text)
+    # Initialize components
+    store = AlertStore(DB_PATH)
+    camera = CameraCapture(index=CAMERA_INDEX)
+    analyzer = AIAnalyzer()
+    hub = HubApp()
+    # Attach store to FastAPI state for route handlers
+    hub.app.state.store = store
+
+    # Start MQTT subscriber
+    mqtt_handler = MQTTHandler(
+        broker=MQTT_BROKER,
+        port=MQTT_PORT,
+        topic="home/sensor/+/+",
+        store=store,
+        camera=camera,
+        analyzer=analyzer,
+        app=hub.app,
+    )
+
+    # Launch the API server (includes REST, WS, MJPEG)
+    hub.run()
