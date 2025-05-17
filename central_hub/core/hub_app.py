@@ -45,10 +45,14 @@ class HubApp:
             finally:
                 self.app.state.websockets.remove(ws)
 
-        @self.app.get("/stream")
-        def stream():
-            return StreamingResponse(self._mjpeg_stream(),
-                                     media_type="multipart/x-mixed-replace; boundary=frame")
+        @self.app.get("/stream/video.mjpg",
+                 responses={200: {"content": {"multipart/x-mixed-replace; boundary=frame": {}}}},
+                 response_class=StreamingResponse)
+        def stream_video_mjpg():
+            return StreamingResponse(
+                self._mjpeg_stream(),
+                media_type="multipart/x-mixed-replace; boundary=frame"
+            )
 
     def _mjpeg_stream(self):
         cap = cv2.VideoCapture(CAMERA_INDEX)
@@ -57,8 +61,10 @@ class HubApp:
             if not ret:
                 break
             _, jpeg = cv2.imencode(".jpg", frame)
-            yield (b"--frame\r\n"
-                   b"Content-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n")
+            yield (
+                    b"--frame\r\n"
+                    b"Content-Type: image/jpeg\r\n\r\n" + jpeg.tobytes() + b"\r\n"
+            )
 
     def run(self):
         import uvicorn

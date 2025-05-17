@@ -35,6 +35,10 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  http: ^1.4.0
+  web_socket_channel: ^3.0.3
+  mjpeg_stream: ^1.0.1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
