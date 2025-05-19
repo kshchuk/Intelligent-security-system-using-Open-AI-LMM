@@ -4,6 +4,7 @@ import 'package:android_app/models/alert.dart';
 import 'package:android_app/services/api_service.dart';
 import 'package:android_app/screens/alerts_page.dart';
 import 'package:android_app/screens/stream_page.dart';
+import 'package:android_app/screens/hub_list_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -37,8 +38,8 @@ class _HomePageState extends State<HomePage> {
   /// Opens a dialog to change the hub IP/domain.
   Future<void> _openSettingsDialog() async {
     final TextEditingController ctrl =
-    TextEditingController(text: Settings.baseUrl);
-    final oldUrl = Settings.baseUrl;
+    TextEditingController(text: Settings.localBaseUrl);
+    final oldUrl = Settings.localBaseUrl;
     bool? saved = await showDialog<bool>(
       context: context,
       builder: (context) {
@@ -64,7 +65,7 @@ class _HomePageState extends State<HomePage> {
                       !input.startsWith('https://')) {
                     input = 'http://$input';
                   }
-                  Settings.baseUrl = input;
+                  Settings.localBaseUrl = input;
                 }
                 Navigator.pop(context, true);
               },
@@ -74,7 +75,7 @@ class _HomePageState extends State<HomePage> {
       },
     );
     // If saved and changed, rebuild to apply new settings
-    if (saved == true && Settings.baseUrl != oldUrl) {
+    if (saved == true && Settings.localBaseUrl != oldUrl) {
       setState(() {
         // Rebuild will recreate pages with new Settings.baseUrl via keys
       });
@@ -84,7 +85,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     // Titles for the two screens
-    final titles = ["Alerts", "Live Stream"];
+    final titles = ['Alerts','Live Stream','Hubs'];
     return Scaffold(
       appBar: AppBar(
         title: Text(titles[_currentIndex]),
@@ -95,9 +96,12 @@ class _HomePageState extends State<HomePage> {
           ),
         ],
       ),
-      body: (_currentIndex == 0)
-          ? AlertsPage(key: ValueKey(Settings.baseUrl))
-          : StreamPage(key: ValueKey(Settings.baseUrl)),
+      body: switch (_currentIndex) {
+        0 => AlertsPage(key: ValueKey(Settings.localBaseUrl)),
+        1 => StreamPage(key: ValueKey(Settings.localBaseUrl)),
+        2 => HubListPage(key: ValueKey(Settings.localBaseUrl)),
+        _ => const Center(child: Text('Unknown page')),
+      },
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) => setState(() {
@@ -106,6 +110,7 @@ class _HomePageState extends State<HomePage> {
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.list), label: 'Alerts'),
           BottomNavigationBarItem(icon: Icon(Icons.videocam), label: 'Stream'),
+          BottomNavigationBarItem(icon:Icon(Icons.device_hub),label:'Hubs'),
         ],
       ),
     );

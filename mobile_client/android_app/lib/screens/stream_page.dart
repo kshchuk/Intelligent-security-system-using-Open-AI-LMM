@@ -16,14 +16,14 @@ class _StreamPageState extends State<StreamPage> {
   void initState() {
     super.initState();
     // Construct the stream URL from current settings
-    _streamUrl = '${Settings.baseUrl}/stream/video.mjpg';
+    _streamUrl = '${Settings.localBaseUrl}/stream/video.mjpg';
   }
 
   @override
   void didUpdateWidget(StreamPage oldWidget) {
     super.didUpdateWidget(oldWidget);
     // If base URL changed (parent rebuilds with same StreamPage), update stream URL
-    final newUrl = '${Settings.baseUrl}/stream/video.mjpg';
+    final newUrl = '${Settings.localBaseUrl}/stream/video.mjpg';
     if (_streamUrl != newUrl) {
       setState(() {
         _streamUrl = newUrl;

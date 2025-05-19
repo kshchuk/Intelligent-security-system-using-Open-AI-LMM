@@ -31,7 +31,7 @@ class Alert {
 
   /// Full URL to the alert's image, combining the hub address and image path.
   String getImageUrl() {
-    return '${Settings.baseUrl}/$imagePath';
+    return '${Settings.localBaseUrl}/$imagePath';
   }
 
   /// Formatted timestamp for display (YYYY-MM-DD HH:MM:SS).

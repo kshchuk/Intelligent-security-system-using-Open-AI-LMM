@@ -24,3 +24,7 @@ app.add_middleware(
 app.include_router(hubs.router)
 app.include_router(nodes.router)
 app.include_router(sensors.router)
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8001)
