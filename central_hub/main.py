@@ -3,15 +3,13 @@ import os
 from core.ai_analyzer import AIAnalyzer
 from alerts.alert_db import AlertStore
 from core.camera_capture import CameraCapture
-from envs import IMAGE_DIR, HLS_DIR, DB_PATH, CAMERA_INDEX, MQTT_BROKER, MQTT_PORT
+from envs import IMAGE_DIR, DB_PATH, CAMERA_INDEX, MQTT_BROKER, MQTT_PORT
 from core.hub_app import HubApp
 from alerts.mqtt_handler import MQTTHandler
 
 if __name__ == "__main__":
     # Ensure directories exist
     os.makedirs(IMAGE_DIR, exist_ok=True)
-
-    os.makedirs(HLS_DIR, exist_ok=True)
 
     # Initialize components
     store = AlertStore(DB_PATH)

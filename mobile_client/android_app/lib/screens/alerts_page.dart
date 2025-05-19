@@ -1,68 +1,66 @@
 import 'dart:async';
 import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/io.dart';
+
 import 'package:android_app/models/alert.dart';
 import 'package:android_app/services/api_service.dart';
-import 'package:android_app/settings.dart';
+import 'package:android_app/screens/alert_detail_page.dart';
 
-/// Screen showing the list of alerts with timestamps, images, and descriptions.
 class AlertsPage extends StatefulWidget {
   const AlertsPage({super.key});
   @override
   State<AlertsPage> createState() => _AlertsPageState();
 }
 
-class _AlertsPageState extends State<AlertsPage> {
-  List<Alert> _alerts = [];
+class _AlertsPageState extends State<AlertsPage> with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  List<Alert> _historyAlerts = [];
+  List<Alert> _newAlerts = [];
   bool _loading = true;
-  IOWebSocketChannel? _channel;
-  StreamSubscription? _wsSubscription;
 
-  /// Load recent alerts via REST API and then connect to WebSocket for updates.
-  void _initAlerts() async {
-    try {
-      final alerts = await ApiService.fetchAlerts();
-      setState(() {
-        _alerts = alerts;
-        _loading = false;
-      });
-    } catch (e) {
-      setState(() {
-        _loading = false;
-      });
-      // Optionally handle error (e.g., show a message)
-    }
-    // Connect to WebSocket after initial fetch
-    _channel = ApiService.connectAlertsWebSocket();
-    _wsSubscription = _channel!.stream.listen((message) {
-      // Parse incoming alert JSON
-      final Map<String, dynamic> data = jsonDecode(message);
-      final newAlert = Alert.fromJson(data);
-      // Avoid duplicate if already in list (e.g., if just fetched)
-      final exists = _alerts.any((alert) => alert.imagePath == newAlert.imagePath);
-      if (!exists) {
-        setState(() {
-          _alerts.insert(0, newAlert);  // newest alert at top
-        });
-      }
-    }, onError: (error) {
-      // Handle WebSocket error if necessary
-      debugPrint("WebSocket error: $error");
-    });
-  }
+  IOWebSocketChannel? _channel;
+  StreamSubscription? _wsSub;
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 2, vsync: this);
     _initAlerts();
   }
 
   @override
   void dispose() {
-    _wsSubscription?.cancel();
+    _wsSub?.cancel();
     _channel?.sink.close();
+    _tabController.dispose();
     super.dispose();
+  }
+
+  void _initAlerts() async {
+    // 1) Load history via REST
+    try {
+      final alerts = await ApiService.fetchAlerts();
+      setState(() {
+        _historyAlerts = alerts;
+        _loading = false;
+      });
+    } catch (_) {
+      setState(() => _loading = false);
+    }
+
+    // 2) Subscribe to WebSocket for new alerts
+    _channel = ApiService.connectAlertsWebSocket();
+    _wsSub = _channel!.stream.listen((msg) {
+      final data = jsonDecode(msg);
+      final a = Alert.fromJson(data);
+      final inHist = _historyAlerts.any((x) => x.imagePath == a.imagePath);
+      final inNew  = _newAlerts.any((x) => x.imagePath == a.imagePath);
+      if (!inHist && !inNew) {
+        setState(() => _newAlerts.insert(0, a));
+      }
+    });
   }
 
   @override
@@ -70,15 +68,42 @@ class _AlertsPageState extends State<AlertsPage> {
     if (_loading) {
       return const Center(child: CircularProgressIndicator());
     }
-    if (_alerts.isEmpty) {
-      return const Center(child: Text('No alerts yet.'));
+
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabController,
+          tabs: const [
+            Tab(text: 'New'),
+            Tab(text: 'History'),
+          ],
+        ),
+        Expanded(
+          child: TabBarView(
+            controller: _tabController,
+            children: [
+              _buildList(_newAlerts, isNew: true),
+              _buildList(_historyAlerts, isNew: false),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildList(List<Alert> alerts, {required bool isNew}) {
+    if (alerts.isEmpty) {
+      return Center(child: Text(isNew ? 'No new alerts.' : 'No history alerts.'));
     }
-    // List of alert cards
     return ListView.builder(
-      padding: const EdgeInsets.all(8.0),
-      itemCount: _alerts.length,
-      itemBuilder: (context, index) {
-        final alert = _alerts[index];
+      padding: const EdgeInsets.all(8),
+      itemCount: alerts.length,
+      itemBuilder: (ctx, i) {
+        final alert = alerts[i];
+        final shortDesc = alert.description.length > 50
+            ? '${alert.description.substring(0, 50)}...'
+            : alert.description;
+
         return Card(
           margin: const EdgeInsets.symmetric(vertical: 4),
           child: ListTile(
@@ -90,8 +115,25 @@ class _AlertsPageState extends State<AlertsPage> {
               fit: BoxFit.cover,
             )
                 : null,
-            title: Text(alert.description),
-            subtitle: Text('${alert.node}/${alert.sensor} — ${alert.getFormattedTime()}'),
+            title: Text(shortDesc),
+            subtitle: Text(alert.getFormattedTime()),
+            trailing: const Icon(Icons.chevron_right),
+            onTap: () {
+              // navigate to detail
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => AlertDetailPage(alert: alert),
+                ),
+              );
+              // if it was new, mark as read
+              if (isNew) {
+                setState(() {
+                  _newAlerts.removeAt(i);
+                  _historyAlerts.insert(0, alert);
+                });
+              }
+            },
           ),
         );
       },
