@@ -117,8 +117,8 @@ def update_sensor(db: Session, sensor_id: int, sensor: schemas.SensorCreate):
     db_sensor = get_sensor(db, sensor_id)
     if not db_sensor:
         return None
-    db_sensor.type = sensor.type
-    db_sensor.pin = sensor.pin
+    db_sensor.type   = sensor.type
+    db_sensor.pin    = sensor.pin
     db_sensor.status = sensor.status
     db.commit()
     db.refresh(db_sensor)

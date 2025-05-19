@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 from routers import hubs, nodes, sensors
+from routers.hub_sync import router as hub_sync_router
 
 Base.metadata.create_all(bind=engine)
 
@@ -24,7 +25,9 @@ app.add_middleware(
 app.include_router(hubs.router)
 app.include_router(nodes.router)
 app.include_router(sensors.router)
+app.include_router(hub_sync_router)
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8001)
+

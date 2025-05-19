@@ -7,7 +7,7 @@ from typing import List, Optional
 class SensorBase(BaseModel):
     type: str
     pin: str
-    status: Optional[str] = None
+    status: Optional[str] = "enabled"
 
 class SensorCreate(SensorBase):
     pass

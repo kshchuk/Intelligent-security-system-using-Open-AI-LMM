@@ -1,6 +1,10 @@
 import machine
 import time
 
+# This is a simple driver for the HW-416 PIR motion sensor.
+# It uses an interrupt to detect motion and a callback to notify the user.
+# The HW-416 has a digital output pin that goes HIGH when motion is detected.
+# In order to control sensitivity and delay, the sensor has a potentiometers that can be adjusted.
 class HW416:
     def __init__(self, pin_no, callback, debounce_ms=200):
         """

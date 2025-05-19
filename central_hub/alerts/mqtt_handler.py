@@ -40,13 +40,18 @@ class MQTTHandler:
 
     def _on_message(self, client, userdata, msg):
         topic_parts = msg.topic.split("/")
-        node = topic_parts[2] if len(topic_parts) > 2 else "unknown"
-        sensor = topic_parts[3] if len(topic_parts) > 3 else "unknown"
+        node = topic_parts[2]
+        sensor = topic_parts[3]
         payload = json.loads(msg.payload.decode())
 
-        print(f"[MQTT] {node}/{sensor}: {payload}")
+        # Check flag
+        key = f"{node}/{sensor}"
+        if not self.app.state.sensor_flags.get(key, True):
+            print(f"[MQTT] Skipping alert for disabled sensor {key}")
+            return
 
-        if payload.get("motion") is False:
+        # Only process if motion==True
+        if not payload.get("motion", False):
             return
 
         # Capture frame

@@ -35,7 +35,7 @@ class _SensorListPageState extends State<SensorListPage> {
           TextButton(onPressed:() async{
             if(!key.currentState!.validate()) return;
             try {
-              if(edit) await ApiService.updateSensor(sensor!.id, typeCtrl.text, pinCtrl.text);
+              if(edit) await ApiService.updateSensor(sensor!.id, typeCtrl.text, pinCtrl.text, sensor!.alertEnabled);
               else     await ApiService.createSensor(widget.node.id, typeCtrl.text, pinCtrl.text);
               Navigator.pop(context);
               _load();
@@ -52,20 +52,60 @@ class _SensorListPageState extends State<SensorListPage> {
       try { await ApiService.deleteSensor(sensor.id); _load(); } catch(_) { ScaffoldMessenger.of(context).showSnackBar(SnackBar(content:Text('Delete failed'))); }
     }
   }
-  @override Widget build(BuildContext context) {
-    if(_loading) return Center(child:CircularProgressIndicator());
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) return Center(child: CircularProgressIndicator());
     return Scaffold(
-      appBar:AppBar(title:Text('Sensors - ${widget.node.location}')),
-      body:ListView.builder(itemCount:_sensors.length,itemBuilder:(ctx,i){final s=_sensors[i];
-      return ListTile(
-        title:Text(s.type), subtitle:Text('Pin: ${s.pin}'),
-        trailing:Row(mainAxisSize:MainAxisSize.min,children:[
-          IconButton(icon:Icon(Icons.edit), onPressed:()=>_showForm(sensor:s)),
-          IconButton(icon:Icon(Icons.delete), onPressed:()=>_confirmDelete(s)),
-        ]),
-      );
-      }),
-      floatingActionButton:FloatingActionButton(child:Icon(Icons.add), onPressed:()=>_showForm()),
+      appBar: AppBar(title: Text('Sensors - ${widget.node.location}')),
+      body: ListView.builder(
+        itemCount: _sensors.length,
+        itemBuilder: (ctx, i) {
+          final s = _sensors[i];
+          return ListTile(
+            title: Text(s.type),
+            subtitle: Text('Pin: ${s.pin}'),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Alert-enable switch
+                Switch(
+                  value: s.alertEnabled,
+                  onChanged: (val) async {
+                    try {
+                      final updated = await ApiService.updateSensor(
+                        s.id,
+                        s.type,
+                        s.pin,
+                        val,
+                      );
+                      setState(() {
+                        s.alertEnabled = updated.alertEnabled;
+                      });
+                    } catch (_) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Failed to update alert setting'))
+                      );
+                    }
+                  },
+                ),
+                // Edit / Delete as before
+                IconButton(
+                  icon: Icon(Icons.edit),
+                  onPressed: () => _showForm(sensor: s),
+                ),
+                IconButton(
+                  icon: Icon(Icons.delete),
+                  onPressed: () => _confirmDelete(s),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+      floatingActionButton: FloatingActionButton(
+        child: Icon(Icons.add),
+        onPressed: () => _showForm(),
+      ),
     );
   }
 }

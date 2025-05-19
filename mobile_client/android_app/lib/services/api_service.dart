@@ -116,17 +116,24 @@ class ApiService {
     if (res.statusCode != 201) throw Exception('Failed to create sensor');
     return Sensor.fromJson(jsonDecode(res.body));
   }
-  static Future<Sensor> updateSensor(int id, String type, String pin) async {
+  static Future<Sensor> updateSensor(
+      int id, String type, String pin, bool enabled) async {
     final res = await http.put(
       Uri.parse('$remote/sensors/$id'),
       headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'type': type, 'pin': pin}),
+      body: jsonEncode({
+        'type': type,
+        'pin': pin,
+        'status': enabled ? 'enabled' : 'disabled',
+      }),
     );
     if (res.statusCode != 200) throw Exception('Failed to update sensor');
     return Sensor.fromJson(jsonDecode(res.body));
   }
+
   static Future<void> deleteSensor(int id) async {
     final res = await http.delete(Uri.parse('$remote/sensors/$id'));
     if (res.statusCode != 200) throw Exception('Failed to delete sensor');
   }
+
 }

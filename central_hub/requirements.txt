@@ -7,3 +7,4 @@ python-multipart
 sqlite-utils
 openai~=1.78.1
 starlette~=0.46.2
+requests~=2.32.3
