@@ -16,24 +16,25 @@ def get_db():
     finally:
         db.close()
 
-@router.put("/{hub_id}/register", status_code=status.HTTP_200_OK)
-def register_hub(hub_id: int, hub: schemas.HubCreate, db: Session = Depends(get_db)):
+@router.put("/register", status_code=status.HTTP_200_OK)
+def register_hub(hub: schemas.HubCreate, db: Session = Depends(get_db)):
     """
     Called by a hub on boot.
     """
 
-    db_hub = crud.get_hub(db, hub_id)
-    hub.last_seen = datetime.utcnow()
+    # Check if the hub already exists
+    db_hub = crud.get_hub_by_name(db, hub.name)
     if db_hub:
-        # Update existing hub
-        db_hub.name = hub.name
+        # Update the existing hub
         db_hub.ip = hub.ip
         db_hub.last_seen = datetime.utcnow()
-        crud.update_hub(db, hub_id, db_hub)
+        crud.update_hub(db, db_hub.id, db_hub)
+        db.commit()
+        return {"status": "updated", "hub_id": db_hub.id}
     else:
+        # Create a new hub
         db_hub = crud.create_hub(db, hub)
-        if not db_hub:
-            raise HTTPException(status_code=400, detail="Hub registration failed")
+        hub_id = db_hub.id
 
     db.commit()
     return {"status": "registered", "hub_id": hub_id}

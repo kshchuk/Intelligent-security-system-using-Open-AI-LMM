@@ -47,4 +47,4 @@ def delete_node(node_id: int, db: Session = Depends(get_db)):
     return db_node
 
 # We’ll include both routers under the app
-router.include_router(single)
+# router.include_router(single)

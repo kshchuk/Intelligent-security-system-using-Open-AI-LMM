@@ -79,11 +79,11 @@ class ApiService {
   }
   static Future<Node> createNode(int hubId, String location) async {
     final res = await http.post(
-      Uri.parse('$remote/hubs/$hubId/nodes'),
+      Uri.parse('$remote/hubs/$hubId/nodes/'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'location': location}),
     );
-    if (res.statusCode != 201) throw Exception('Failed to create node');
+    if (res.  statusCode != 201) throw Exception('Failed to create node');
     return Node.fromJson(jsonDecode(res.body));
   }
   static Future<Node> updateNode(int id, String location) async {
@@ -109,7 +109,7 @@ class ApiService {
   }
   static Future<Sensor> createSensor(int nodeId, String type, String pin) async {
     final res = await http.post(
-      Uri.parse('$remote/nodes/$nodeId/sensors'),
+      Uri.parse('$remote/nodes/$nodeId/sensors/'),
       headers: {'Content-Type': 'application/json'},
       body: jsonEncode({'type': type, 'pin': pin}),
     );

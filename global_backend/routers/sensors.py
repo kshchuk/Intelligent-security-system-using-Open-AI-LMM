@@ -46,4 +46,4 @@ def delete_sensor(sensor_id: int, db: Session = Depends(get_db)):
         raise HTTPException(status_code=404, detail="Sensor not found")
     return db_sensor
 
-router.include_router(single)
+# router.include_router(single)

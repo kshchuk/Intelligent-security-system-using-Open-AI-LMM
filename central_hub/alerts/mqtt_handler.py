@@ -51,8 +51,8 @@ class MQTTHandler:
             return
 
         # Only process if motion==True
-        if not payload.get("motion", False):
-            return
+        # if not payload.get("motion", False):
+        #    return
 
         # Capture frame
         image_path = self.camera.capture()

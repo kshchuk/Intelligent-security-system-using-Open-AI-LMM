@@ -10,7 +10,7 @@ from starlette.responses import StreamingResponse
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket
 
-from envs import IMAGE_DIR, CAMERA_INDEX, CONFIG_SYNC_INTERVAL, CENTRAL_API_URL, HUB_ID
+from envs import IMAGE_DIR, CAMERA_INDEX, CONFIG_SYNC_INTERVAL, CENTRAL_API_URL, HUB_NAME
 
 
 class HubApp:
@@ -27,6 +27,8 @@ class HubApp:
         )
         self.app.state.websockets = []
         self.app.state.sensor_flags: dict[str, bool] = {}
+
+        self.hub_id = None
 
         # Mount static folders
         self.app.mount("/images", StaticFiles(directory=IMAGE_DIR), name="images")
@@ -84,17 +86,18 @@ class HubApp:
 
     def _register_from_central(self):
         """
-        PUT /hub/{HUB_ID}/register with ip address and name
+        PUT /hub/register with ip address and name
         """
-        url = f"{CENTRAL_API_URL}/hub/{HUB_ID}/register"
+        url = f"{CENTRAL_API_URL}/hub/register"
         ip = requests.get("https://api.ipify.org").text
-        name = f"hub-{HUB_ID}"
+        name = HUB_NAME
         data = {
             "ip": ip,
             "name": name,
         }
         resp = requests.put(url, json=data)
         resp.raise_for_status()
+        self.hub_id = resp.json().get("hub_id")
         print(f"[SYNC] Registered with central server: {resp.json()}")
 
     def _sync_config_from_central(self):
@@ -106,11 +109,11 @@ class HubApp:
         if disabled, skip the alert.
 
         """
-        url = f"{CENTRAL_API_URL}/hub/{HUB_ID}/config"
+        url = f"{CENTRAL_API_URL}/hub/{self.hub_id}/config"
         resp = requests.get(url)
         resp.raise_for_status()
         new_flags: dict[str, bool] = {}
-        for node in resp.json():
+        for node in resp.json().get("nodes", []):
             node_key = node.get('location')
             for sensor in node.get('sensors', []):
                 sensor_key = sensor.get('type')

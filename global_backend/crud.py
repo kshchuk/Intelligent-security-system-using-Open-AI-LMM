@@ -10,6 +10,9 @@ def get_hubs(db: Session, skip: int = 0, limit: int = 100):
 def get_hub(db: Session, hub_id: int):
     return db.query(models.Hub).filter(models.Hub.id == hub_id).first()
 
+def get_hub_by_name(db: Session, hub_name: str):
+    return db.query(models.Hub).filter(models.Hub.name == hub_name).first()
+
 def create_hub(db: Session, hub: schemas.HubCreate):
     db_hub = models.Hub(
         name=hub.name,

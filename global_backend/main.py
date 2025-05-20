@@ -24,7 +24,9 @@ app.add_middleware(
 # Mount routers
 app.include_router(hubs.router)
 app.include_router(nodes.router)
+app.include_router(nodes.single)
 app.include_router(sensors.router)
+app.include_router(sensors.single)
 app.include_router(hub_sync_router)
 
 if __name__ == "__main__":

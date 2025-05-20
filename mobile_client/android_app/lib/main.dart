@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:android_app/settings.dart';
-import 'package:android_app/models/alert.dart';
-import 'package:android_app/services/api_service.dart';
 import 'package:android_app/screens/alerts_page.dart';
 import 'package:android_app/screens/stream_page.dart';
 import 'package:android_app/screens/hub_list_page.dart';
