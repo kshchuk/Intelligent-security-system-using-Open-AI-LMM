@@ -70,6 +70,9 @@ def main():
     client.connect(args.host, args.port, keepalive=60)
     client.loop_start()
 
+
+    # sleep for a bit to ensure connection
+    time.sleep(10)
     sent = 0
     try:
         while True:

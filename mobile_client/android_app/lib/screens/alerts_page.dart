@@ -51,7 +51,7 @@ class _AlertsPageState extends State<AlertsPage> with SingleTickerProviderStateM
     }
 
     // 2) Subscribe to WebSocket for new alerts
-    _channel = ApiService.connectAlertsWebSocket();
+    _channel = await ApiService.connectAlertsWebSocket();
     _wsSub = _channel!.stream.listen((msg) {
       final data = jsonDecode(msg);
       final a = Alert.fromJson(data);

@@ -1,10 +1,14 @@
-import 'package:flutter/material.dart';
 import 'package:android_app/settings.dart';
 import 'package:android_app/screens/alerts_page.dart';
 import 'package:android_app/screens/stream_page.dart';
 import 'package:android_app/screens/hub_list_page.dart';
 
-void main() {
+import 'package:flutter/material.dart';
+import 'package:android_app/services/secure_storage.dart';
+import 'package:android_app/screens/login_page.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   runApp(const MyApp());
 }
 
@@ -13,12 +17,21 @@ class MyApp extends StatelessWidget {
   const MyApp({super.key});
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'IoT Security Hub',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
-      ),
-      home: const HomePage(),
+    return FutureBuilder<String?>(
+      future: SecureStorage.readToken(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState != ConnectionState.done) {
+          return const MaterialApp(home: Scaffold(body: Center(child: CircularProgressIndicator())));
+        }
+        final loggedIn = snapshot.data != null;
+        return MaterialApp(
+          title: 'IoT Security Hub',
+          theme: ThemeData(
+            colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
+          ),
+          home: loggedIn ? const HomePage() : const LoginPage(),
+        );
+      },
     );
   }
 }

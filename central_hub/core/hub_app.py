@@ -3,14 +3,25 @@ import threading
 import time
 
 import cv2
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 import requests
 from starlette.middleware.cors import CORSMiddleware
 from starlette.responses import StreamingResponse
 from starlette.staticfiles import StaticFiles
 from starlette.websockets import WebSocket
+from starlette.status import WS_1008_POLICY_VIOLATION
 
-from envs import IMAGE_DIR, CAMERA_INDEX, CONFIG_SYNC_INTERVAL, CENTRAL_API_URL, HUB_NAME
+from envs import (
+    IMAGE_DIR,
+    CAMERA_INDEX,
+    CONFIG_SYNC_INTERVAL,
+    CENTRAL_API_URL,
+    HUB_NAME,
+    SECRET_KEY,
+    ALGORITHM,
+)
 
 
 class HubApp:
@@ -41,12 +52,37 @@ class HubApp:
         threading.Thread(target=self._config_sync_loop, daemon=True).start()
 
     def _setup_routes(self):
-        @self.app.get("/alerts")
+        oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{CENTRAL_API_URL}/auth/token")
+
+        async def _get_current_user(token: str = Depends(oauth2_scheme)):
+            credentials_exception = HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+            try:
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                username: str = payload.get("sub")
+                if username is None:
+                    raise credentials_exception
+            except JWTError:
+                raise credentials_exception
+            return username
+
+        @self.app.get("/alerts", dependencies=[Depends(_get_current_user)])
         def get_alerts():
             return self.app.state.store.get_alerts()
 
         @self.app.websocket("/ws/alerts")
-        async def ws_alerts(ws: WebSocket):
+        async def ws_alerts(ws: WebSocket, token: str = Depends(oauth2_scheme)):
+            try:
+                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+                username: str = payload.get("sub")
+                if username is None:
+                    raise JWTError()
+            except JWTError:
+                await ws.close(code=WS_1008_POLICY_VIOLATION)
+                return
             await ws.accept()
             self.app.state.websockets.append(ws)
             try:
@@ -55,13 +91,16 @@ class HubApp:
             finally:
                 self.app.state.websockets.remove(ws)
 
-        @self.app.get("/stream/video.mjpg",
-                 responses={200: {"content": {"multipart/x-mixed-replace; boundary=frame": {}}}},
-                 response_class=StreamingResponse)
+        @self.app.get(
+            "/stream/video.mjpg",
+            dependencies=[Depends(_get_current_user)],
+            responses={200: {"content": {"multipart/x-mixed-replace; boundary=frame": {}}}},
+            response_class=StreamingResponse,
+        )
         def stream_video_mjpg():
             return StreamingResponse(
                 self._mjpeg_stream(),
-                media_type="multipart/x-mixed-replace; boundary=frame"
+                media_type="multipart/x-mixed-replace; boundary=frame",
             )
 
     def _mjpeg_stream(self):
