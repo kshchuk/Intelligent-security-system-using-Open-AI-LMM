@@ -6,3 +6,4 @@ central_hub/alerts/alertdb.sqlite
 central_hub/alerts/identifier.sqlite
 *.xml
 *.xml
+.idea/diploma.iml

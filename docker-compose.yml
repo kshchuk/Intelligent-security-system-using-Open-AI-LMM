@@ -1,0 +1,57 @@
+version: "3.8"
+
+services:
+  db:
+    image: postgres:14
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: securitydb
+    volumes:
+      - db_data:/var/lib/postgresql/data
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    ports:
+      - "1883:1883"
+    volumes:
+      - mosquitto_data:/mosquitto/data
+      - mosquitto_log:/mosquitto/log
+
+  global_backend:
+    build:
+      context: ./global_backend
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: "postgresql://postgres:postgres@db/securitydb"
+      SECRET_KEY: "CHANGE_ME"
+      ALGORITHM: "HS256"
+    ports:
+      - "8001:8001"
+
+  central_hub:
+    build:
+      context: ./central_hub
+    depends_on:
+      - global_backend
+      - mqtt
+    environment:
+      CENTRAL_API_URL: "http://global_backend:8001"
+      MQTT_BROKER: "mqtt"
+      MQTT_PORT: "1883"
+      SECRET_KEY: "CHANGE_ME"
+      OPENAI_API_KEY: "CHANGE_ME"
+      ALGORITHM: "HS256"
+    volumes:
+      - central_images:/app/images
+      - central_data:/app/alerts
+    ports:
+      - "8000:8000"
+
+volumes:
+  db_data:
+  mosquitto_data:
+  mosquitto_log:
+  central_images:
+  central_data:
