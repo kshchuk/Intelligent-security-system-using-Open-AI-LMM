@@ -18,7 +18,7 @@ services:
       - mosquitto_data:/mosquitto/data
       - mosquitto_log:/mosquitto/log
 
-  global_backend:
+  backend:
     build:
       context: ./global_backend
     depends_on:
@@ -34,10 +34,10 @@ services:
     build:
       context: ./central_hub
     depends_on:
-      - global_backend
+      - backend
       - mqtt
     environment:
-      CENTRAL_API_URL: "http://global_backend:8001"
+      CENTRAL_API_URL: "http://backend:8001"
       MQTT_BROKER: "mqtt"
       MQTT_PORT: "1883"
       SECRET_KEY: "CHANGE_ME"
