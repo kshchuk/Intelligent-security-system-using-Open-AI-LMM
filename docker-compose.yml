@@ -31,14 +31,14 @@ services:
       - "8001:8001"
 
   central_hub:
-    build:
-      context: ./central_hub
+    profiles: ["docker"]     # ← this service will only run if you do --profile docker
+    build: ./central_hub
     depends_on:
       - backend
       - mqtt
     environment:
       CENTRAL_API_URL: "http://backend:8001"
-      MQTT_BROKER: "mqtt"
+      MQTT_BROKER: mqtt
       MQTT_PORT: "1883"
       SECRET_KEY: "CHANGE_ME"
       OPENAI_API_KEY: "CHANGE_ME"
