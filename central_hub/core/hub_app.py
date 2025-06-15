@@ -46,8 +46,12 @@ class HubApp:
         # Setup routes
         self._setup_routes()
 
+        # Register hub and fetch initial configuration (nodes/sensors)
         self._register_from_central()
-
+        try:
+            self._sync_config_from_central()
+        except Exception as e:
+            print(f"[SYNC] Initial config sync failed: {e}")
         # Start periodic config sync
         threading.Thread(target=self._config_sync_loop, daemon=True).start()
 
@@ -136,8 +140,11 @@ class HubApp:
         }
         resp = requests.put(url, json=data)
         resp.raise_for_status()
-        self.hub_id = resp.json().get("hub_id")
-        print(f"[SYNC] Registered with central server: {resp.json()}")
+        result = resp.json()
+        self.hub_id = result.get("hub_id")
+        # expose hub_id to other components (e.g. MQTT handler)
+        self.app.state.hub_id = self.hub_id
+        print(f"[SYNC] Registered with central server: {result}")
 
     def _sync_config_from_central(self):
         """
@@ -151,15 +158,29 @@ class HubApp:
         url = f"{CENTRAL_API_URL}/hub/{self.hub_id}/config"
         resp = requests.get(url)
         resp.raise_for_status()
+        data = resp.json()
+        # build sensor flag map
         new_flags: dict[str, bool] = {}
-        for node in resp.json().get("nodes", []):
+        # cache of known nodes and sensors for auto-registration
+        known_nodes: set[str] = set()
+        node_id_map: dict[str, int] = {}
+        known_sensors: dict[str, set[str]] = {}
+        for node in data.get("nodes", []):
             node_key = node.get('location')
+            node_id = node.get('id')
+            known_nodes.add(node_key)
+            node_id_map[node_key] = node_id
+            sensors = set()
             for sensor in node.get('sensors', []):
                 sensor_key = sensor.get('type')
                 enabled = sensor.get('status', '') == 'enabled'
-                key = f"{node_key}/{sensor_key}"
-                new_flags[key] = enabled
+                new_flags[f"{node_key}/{sensor_key}"] = enabled
+                sensors.add(sensor_key)
+            known_sensors[node_key] = sensors
         self.app.state.sensor_flags = new_flags
+        self.app.state.known_nodes = known_nodes
+        self.app.state.node_id_map = node_id_map
+        self.app.state.known_sensors = known_sensors
         print(f"[SYNC] Updated sensor flags: {new_flags}")
 
     def run(self):

@@ -4,6 +4,8 @@ import threading
 from datetime import datetime
 
 from paho.mqtt.client import Client as MQTTClient
+import requests
+from envs import CENTRAL_API_URL
 
 from alerts.alert_db import AlertStore
 from core.ai_analyzer import AIAnalyzer
@@ -43,6 +45,47 @@ class MQTTHandler:
         node = topic_parts[2]
         sensor = topic_parts[3]
         payload = json.loads(msg.payload.decode())
+
+        # Auto-register new node/sensor in central backend
+        hub_id = getattr(self.app.state, "hub_id", None)
+        if hub_id is not None:
+            # initialize caches if missing
+            if not hasattr(self.app.state, "known_nodes"):
+                self.app.state.known_nodes = set()
+                self.app.state.node_id_map = {}
+                self.app.state.known_sensors = {}
+            # register node if not yet known
+            if node not in self.app.state.known_nodes:
+                try:
+                    resp_node = requests.post(
+                        f"{CENTRAL_API_URL}/hubs/{hub_id}/nodes",
+                        json={"location": node},
+                    )
+                    resp_node.raise_for_status()
+                    node_data = resp_node.json()
+                    nid = node_data.get("id")
+                    self.app.state.known_nodes.add(node)
+                    self.app.state.node_id_map[node] = nid
+                    self.app.state.known_sensors[node] = set()
+                    print(f"[MQTT][AUTO-REG] Created node '{node}' (id={nid})")
+                except Exception as e:
+                    print(f"[MQTT][AUTO-REG] Failed to create node '{node}': {e}")
+            # register sensor if not yet known for this node
+            if sensor not in self.app.state.known_sensors.get(node, set()):
+                pin_val = payload.get("pin", "")
+                try:
+                    node_id = self.app.state.node_id_map.get(node)
+                    if node_id is None:
+                        raise RuntimeError(f"Unknown node id for '{node}'")
+                    resp_s = requests.post(
+                        f"{CENTRAL_API_URL}/nodes/{node_id}/sensors",
+                        json={"type": sensor, "pin": pin_val},
+                    )
+                    resp_s.raise_for_status()
+                    self.app.state.known_sensors[node].add(sensor)
+                    print(f"[MQTT][AUTO-REG] Created sensor '{sensor}' on node '{node}'")
+                except Exception as e:
+                    print(f"[MQTT][AUTO-REG] Failed to create sensor '{sensor}' on node '{node}': {e}")
 
         # Check flag
         key = f"{node}/{sensor}"
