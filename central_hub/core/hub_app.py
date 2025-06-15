@@ -78,15 +78,7 @@ class HubApp:
             return self.app.state.store.get_alerts()
 
         @self.app.websocket("/ws/alerts")
-        async def ws_alerts(ws: WebSocket, token: str = Depends(oauth2_scheme)):
-            try:
-                payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-                username: str = payload.get("sub")
-                if username is None:
-                    raise JWTError()
-            except JWTError:
-                await ws.close(code=WS_1008_POLICY_VIOLATION)
-                return
+        async def ws_alerts(ws: WebSocket):
             await ws.accept()
             self.app.state.websockets.append(ws)
             try:
