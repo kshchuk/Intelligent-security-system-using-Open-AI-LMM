@@ -3,7 +3,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from database import engine, Base
 from routers import hubs, nodes, sensors
 from routers.hub_sync import router as hub_sync_router
+from routers.hub_proxy import router as hub_proxy_router
 from routers.auth import router as auth_router, get_current_active_user
+from routers.auth import get_current_user, get_current_active_user
 
 Base.metadata.create_all(bind=engine)
 
@@ -30,6 +32,7 @@ app.include_router(nodes.single, dependencies=[Depends(get_current_active_user)]
 app.include_router(sensors.router, dependencies=[Depends(get_current_active_user)])
 app.include_router(sensors.single, dependencies=[Depends(get_current_active_user)])
 app.include_router(hub_sync_router)
+app.include_router(hub_proxy_router)
 
 if __name__ == "__main__":
     import uvicorn

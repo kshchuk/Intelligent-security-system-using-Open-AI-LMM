@@ -14,9 +14,9 @@ import '../models/sensor.dart';
 class ApiService {
   static String get remote => Settings.remoteBaseUrl;
   
-  /// Fetches recent alerts from the REST API (`/alerts` endpoint).
+  /// Fetches recent alerts via the backend proxy (`/hubs/{hubId}/alerts`).
   static Future<List<Alert>> fetchAlerts() async {
-    final uri = Uri.parse('${Settings.localBaseUrl}/alerts');
+    final uri = Uri.parse('${Settings.hubProxyBase}/alerts');
     final token = await SecureStorage.readToken();
     final response = await http.get(
       uri,
@@ -30,16 +30,16 @@ class ApiService {
     }
   }
 
-  /// Opens a WebSocket connection to the `/ws/alerts` endpoint for live alerts.
+  /// Opens a WebSocket to the backend proxy (`/hubs/{hubId}/ws/alerts`) for live alerts.
   static Future<IOWebSocketChannel> connectAlertsWebSocket() async {
     final token = await SecureStorage.readToken();
-    final baseUri = Uri.parse(Settings.localBaseUrl);
+    final baseUri = Uri.parse(Settings.hubProxyBase);
     final scheme = baseUri.scheme == 'https' ? 'wss' : 'ws';
     final wsUri = Uri(
       scheme: scheme,
       host: baseUri.host,
       port: baseUri.port,
-      path: '/ws/alerts',
+      path: '${baseUri.path}/ws/alerts',
     );
     return IOWebSocketChannel.connect(
       wsUri.toString(),

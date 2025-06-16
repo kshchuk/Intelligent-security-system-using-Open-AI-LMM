@@ -39,7 +39,7 @@ class _AlertsPageState extends State<AlertsPage> with SingleTickerProviderStateM
   }
 
   void _initAlerts() async {
-    // 1) Load history via REST
+    // 1) Load history via REST proxy
     try {
       final alerts = await ApiService.fetchAlerts();
       setState(() {
@@ -50,7 +50,7 @@ class _AlertsPageState extends State<AlertsPage> with SingleTickerProviderStateM
       setState(() => _loading = false);
     }
 
-    // 2) Subscribe to WebSocket for new alerts
+    // 2) Subscribe to WebSocket proxy for new alerts
     _channel = await ApiService.connectAlertsWebSocket();
     _wsSub = _channel!.stream.listen((msg) {
       final data = jsonDecode(msg);
